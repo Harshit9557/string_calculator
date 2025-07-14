@@ -1,25 +1,45 @@
-// File: string_calculator.dart
+// lib/string_calculator.dart
 class StringCalculator {
-  int add(String numbers) {
-    if (numbers.isEmpty) return 0;
+  int add(String input) {
+    if (input.isEmpty) return 0;
 
-    String delimiter = ',';
-    String input = numbers;
+    String numbers = input;
+    List<String> delimiters = [','];
 
-    if (numbers.startsWith('//')) {
-      final parts = numbers.split('\n');
-      delimiter = parts[0].substring(2);
-      input = parts.sublist(1).join('\n');
+    // Custom delimiter syntax
+    if (input.startsWith('//')) {
+      final delimiterSectionEnd = input.indexOf('\n');
+      final delimiterSection = input.substring(2, delimiterSectionEnd);
+      numbers = input.substring(delimiterSectionEnd + 1);
+
+      // Handle multiple delimiters or variable length delimiters
+      final delimiterPattern = RegExp(r'\[(.*?)\]');
+      final matches = delimiterPattern.allMatches(delimiterSection);
+
+      if (matches.isNotEmpty) {
+        delimiters = matches.map((m) => RegExp.escape(m.group(1)!)).toList();
+      } else {
+        delimiters = [RegExp.escape(delimiterSection)];
+      }
     }
 
-    input = input.replaceAll('\n', delimiter);
-    final numberList = input.split(delimiter).map(int.parse).toList();
+    // Replace newlines with comma for standard processing
+    delimiters.add('\n');
+    final pattern = RegExp(delimiters.join('|'));
+    final tokens = numbers.split(pattern);
 
-    final negatives = numberList.where((n) => n < 0).toList();
+    final negatives = <int>[];
+    final sum = tokens.fold<int>(0, (total, token) {
+      final number = int.tryParse(token.trim()) ?? 0;
+      if (number < 0) negatives.add(number);
+      if (number <= 1000) return total + number;
+      return total;
+    });
+
     if (negatives.isNotEmpty) {
       throw Exception('negative numbers not allowed ${negatives.join(',')}');
     }
 
-    return numberList.reduce((a, b) => a + b);
+    return sum;
   }
 }
